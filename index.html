@@ -145,6 +145,8 @@ input:disabled,select:disabled{opacity:.45;cursor:not-allowed}
         <input type="number" id="flatSavingsPct" value="" placeholder="optional" min="0" max="100" step="1" oninput="reconcileAcctInputs()">
       </div>
       <div style="font-size:11px;color:var(--ink3);margin:-2px 0 10px;line-height:1.5">If set, this overrides the 401k / IRA / HSA / Brokerage settings below with an automatic waterfall: <strong>HSA</strong> up to its cap, then <strong>IRA</strong>, then <strong>401k</strong>, then whatever's left into <strong>Brokerage</strong>. Leave blank to set each account yourself — or check "Max" on an account to fund it to its annual limit automatically. The 529 is always set separately.</div>
+      <button type="button" class="addbtn" id="acctAdvLink" onclick="toggleAcctAdvanced()" style="margin-bottom:10px">Advanced: set accounts individually ▾</button>
+      <div id="acctAdvanced" style="display:none">
       <div style="display:grid;grid-template-columns:1.7fr 1fr 1fr .65fr .5fr;gap:6px;margin-bottom:8px;padding:0 4px">
         <div></div>
         <div style="font-size:10px;font-weight:500;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;text-align:center">Balance ($)</div>
@@ -201,6 +203,7 @@ input:disabled,select:disabled{opacity:.45;cursor:not-allowed}
         </div>
         <div style="font-size:11px;color:var(--ink3);padding:6px 4px 0;line-height:1.5">Set each account's contribution as % of gross income or a flat $/yr amount, or check "Max" to fund it to its annual cap automatically. 401k, IRA and HSA are capped at today's real limits (rising with inflation); HSA contributions stop the year your first kid arrives. Home equity grows via purchases in Life Events; debt assumes 15% interest.</div>
       </div>
+      </div>
     </div>
   </div>
   <div class="card">
@@ -232,20 +235,20 @@ input:disabled,select:disabled{opacity:.45;cursor:not-allowed}
       <div id="kids-list" class="evl"></div>
       <button class="addbtn" onclick="addKid()"><span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"></circle><path d="M5.5 21c0-4 3-7 6.5-7s6.5 3 6.5 7"></path></svg></span> Add a kid</button>
       <div style="font-size:11px;color:var(--ink3);margin-top:10px;line-height:1.6">Enter the year you expect each child. Childcare ($18k/yr) applies for 5 years. Maternity leave cost applied in birth year.</div>
+      <div class="row" style="margin-top:12px;padding-top:12px;border-top:0.5px solid var(--sand3)"><label for="collegePerKid">College cost per kid ($/yr)</label><input type="number" id="collegePerKid" value="30000"></div>
     </div>
     <div class="card">
       <div class="pill p-clay">Home purchases</div>
       <div id="houses-list" class="evl"></div>
       <button class="addbtn" onclick="addHouse()"><span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span> Add a home purchase</button>
       <div style="font-size:11px;color:var(--ink3);margin-top:10px;line-height:1.6">Down payment pulled from savings. Mortgage replaces rent. Full property value appreciates from purchase year.</div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="pill p-gold">Home assumptions</div>
-    <div class="g3" style="margin-bottom:0">
-      <div><div class="row"><label for="mortgageRate">Mortgage rate (%)</label><input type="number" id="mortgageRate" value="6.5" min="1" max="15" step="0.1"></div></div>
-      <div><div class="row"><label for="mortgageTerm">Mortgage term (years)</label><input type="number" id="mortgageTerm" value="30" min="10" max="30" step="5"></div></div>
-      <div><div class="row"><label for="collegePerKid">College cost per kid ($/yr)</label><input type="number" id="collegePerKid" value="30000"></div></div>
+      <div id="homeAssumptions" style="display:none;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--sand3)">
+        <div style="font-size:10px;font-weight:500;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Mortgage assumptions</div>
+        <div class="g2" style="margin-bottom:0">
+          <div><div class="row"><label for="mortgageRate">Mortgage rate (%)</label><input type="number" id="mortgageRate" value="6.5" min="1" max="15" step="0.1"></div></div>
+          <div><div class="row"><label for="mortgageTerm">Mortgage term (years)</label><input type="number" id="mortgageTerm" value="30" min="10" max="30" step="5"></div></div>
+        </div>
+      </div>
     </div>
   </div>
   <div class="wcard">
@@ -294,8 +297,11 @@ input:disabled,select:disabled{opacity:.45;cursor:not-allowed}
       <div><label for="career1">Profession</label><select id="career1" onchange="onC1Change()"></select></div>
       <div><label for="sal1">Your current salary ($/yr)</label><input type="number" id="sal1" value="" placeholder="Enter salary" oninput="updatePreview();renderCareerChart()"></div>
     </div>
-    <label style="margin-bottom:6px">Current step</label>
-    <select id="fpa-step" onchange="renderCareerChart()" style="margin-bottom:10px;width:100%"></select>
+    <div class="g2" style="margin-bottom:10px">
+      <div><label style="margin-bottom:6px">Current step</label><select id="fpa-step" onchange="renderCareerChart()" style="width:100%"></select></div>
+      <div><label style="margin-bottom:6px">Realistic ceiling</label><select id="fpa-ceiling" onchange="renderCareerChart()" style="width:100%"></select></div>
+    </div>
+    <div style="font-size:11px;color:var(--ink3);margin:-4px 0 10px;line-height:1.5">Not every career reaches the very top rung. Pick the highest level you'd realistically expect — the projection climbs the ladder on the usual timeline, then plateaus (growing only with inflation) once it hits that ceiling, instead of assuming continuous promotion to the top.</div>
     <div style="display:flex;gap:0;overflow-x:auto;padding-bottom:4px" id="fpa-tl"></div>
   </div>
   <div class="ccard cwife">
@@ -304,8 +310,11 @@ input:disabled,select:disabled{opacity:.45;cursor:not-allowed}
       <div><label for="career2">Profession</label><select id="career2" onchange="onC2Change()"></select></div>
       <div><label for="sal2">Wife's current salary ($/yr)</label><input type="number" id="sal2" value="" placeholder="Enter salary" oninput="updatePreview();renderCareerChart()"></div>
     </div>
-    <label style="margin-bottom:6px">Current step</label>
-    <select id="pa-step" onchange="renderCareerChart()" style="margin-bottom:10px;width:100%"></select>
+    <div class="g2" style="margin-bottom:10px">
+      <div><label style="margin-bottom:6px">Current step</label><select id="pa-step" onchange="renderCareerChart()" style="width:100%"></select></div>
+      <div><label style="margin-bottom:6px">Realistic ceiling</label><select id="pa-ceiling" onchange="renderCareerChart()" style="width:100%"></select></div>
+    </div>
+    <div style="font-size:11px;color:var(--ink3);margin:-4px 0 10px;line-height:1.5">Not every career reaches the very top rung. Pick the highest level you'd realistically expect — the projection climbs the ladder on the usual timeline, then plateaus (growing only with inflation) once it hits that ceiling, instead of assuming continuous promotion to the top.</div>
     <div style="display:flex;gap:0;overflow-x:auto;padding-bottom:4px" id="pa-tl"></div>
   </div>
   <div class="card">
@@ -405,6 +414,12 @@ function reconcileAcctInputs(){
   });
   updatePreview();
 }
+function toggleAcctAdvanced(){
+  const d=el('acctAdvanced'),b=el('acctAdvLink');if(!d||!b)return;
+  const show=d.style.display==='none';
+  d.style.display=show?'block':'none';
+  b.textContent=show?'Advanced: set accounts individually ▴':'Advanced: set accounts individually ▾';
+}
 function firstKidYear(){return kids.length?Math.min(...kids.map(k=>k.year)):Infinity;}
 const fK=n=>{const a=Math.abs(n),s=n<0?'-':'';return a>=1e6?s+'$'+(a/1e6).toFixed(1)+'M':a>=1e3?s+'$'+(a/1e3).toFixed(0)+'K':s+'$'+Math.round(a)};
 const gv=id=>{const e=document.getElementById(id);return e?parseFloat(e.value)||0:0};
@@ -440,23 +455,26 @@ const CAREERS={
 function track1(){return CAREERS[el('career1')?.value]||CAREERS['FP&A / Finance']}
 function track2(){return CAREERS[el('career2')?.value]||CAREERS['Physician Assistant']}
 
-// Raises within a career step come from track multipliers; once the track tops out, ongoing
-// raises are modeled as a cost-of-living adjustment tied to the user's inflation input (not a
-// fixed rate), so they don't run away independent of the rest of the model's assumptions.
-function salAt(base,track,step,yr,infl){
+// Raises within a career step come from track multipliers; once the track tops out (or hits the
+// user-chosen realistic ceiling — most careers plateau well before the very top rung, rather than
+// climbing every rung on offer), ongoing raises are modeled as a cost-of-living adjustment tied to
+// the user's inflation input (not a fixed rate), so they don't run away independent of the rest of
+// the model's assumptions.
+function salAt(base,track,step,yr,infl,ceiling){
   if(!base||!track||!track.length)return 0;
   const cola=1+(infl!=null?infl:gv('inflation')/100);
-  const s=Math.min(step,track.length-1),b=base/track[s].m;
-  for(let i=s;i<track.length;i++){
-    const nxt=i+1<track.length?track[i+1].y-track[s].y:9999;
+  const top=ceiling!=null?Math.min(ceiling,track.length-1):track.length-1;
+  const s=Math.min(step,top),b=base/track[s].m;
+  for(let i=s;i<top;i++){
+    const nxt=track[i+1].y-track[s].y;
     if(yr<nxt)return b*track[i].m*Math.pow(cola,yr);
   }
-  return b*track[track.length-1].m*Math.pow(cola,yr);
+  return b*track[top].m*Math.pow(cola,yr);
 }
 
-function wifeSal(cy,base,ps,yr,scenarioOverride,infl){
+function wifeSal(cy,base,ps,yr,scenarioOverride,infl,ceiling){
   const sc=scenarioOverride||scenario;
-  const full=salAt(base,track2(),ps,yr,infl);
+  const full=salAt(base,track2(),ps,yr,infl,ceiling);
   if(sc==='full')return full;
   if(sc==='leave'){const ls=gv('leave-start'),ld=gv('leave-dur'),rp=gv('leave-ret-pct')/100;if(cy>=ls&&cy<ls+ld)return 0;if(cy>=ls+ld)return full*rp;return full;}
   if(sc==='parttime'){const ps2=gv('pt-start'),pp=gv('pt-pct')/100,pe=gv('pt-end');if(cy>=ps2&&(!pe||cy<pe))return full*pp;return full;}
@@ -522,6 +540,14 @@ function populateSteps(sid,track,cur){
   const e=el(sid);if(!e||!track)return;
   e.innerHTML=track.map((s,i)=>`<option value="${i}"${i===cur?' selected':''}>${s.t}</option>`).join('');
 }
+// Default ceiling sits one rung below the very top — reaching the literal top job (CFO/VP/etc.)
+// is the exception, not the norm, so that shouldn't be the default assumption.
+function defaultCeiling(track){return Math.max(0,track.length-2);}
+function populateCeiling(sid,track,cur){
+  const e=el(sid);if(!e||!track)return;
+  const c=cur!=null?cur:defaultCeiling(track);
+  e.innerHTML=track.map((s,i)=>`<option value="${i}"${i===c?' selected':''}>${s.t}${i===track.length-1?' (top)':''}</option>`).join('');
+}
 function buildTL(tid,track,step,color){
   const e=el(tid);if(!e||!track)return;
   e.innerHTML='<div style="display:flex;gap:0;overflow-x:auto">'+track.map((s,i)=>{
@@ -529,11 +555,12 @@ function buildTL(tid,track,step,color){
     return`<div class="tls"><div class="tld" style="background:${bg};border:1.5px solid ${bc};color:${tc}">${i+1}</div><div class="tlt" style="color:${a?color:'#888'}">${s.t}</div><div class="tly">${s.y===0?'Now':'~'+s.y+'y'}</div></div>`;
   }).join('')+'</div>';
 }
-function onC1Change(){populateSteps('fpa-step',track1(),0);renderCareerChart();}
-function onC2Change(){populateSteps('pa-step',track2(),0);renderCareerChart();}
+function onC1Change(){populateSteps('fpa-step',track1(),0);populateCeiling('fpa-ceiling',track1());renderCareerChart();}
+function onC2Change(){populateSteps('pa-step',track2(),0);populateCeiling('pa-ceiling',track2());renderCareerChart();}
 
 function renderCareerChart(){
   const s1=gv('sal1'),s2=gv('sal2'),fs=sv('fpa-step'),ps=sv('pa-step');
+  const fc=sv('fpa-ceiling'),pc=sv('pa-ceiling');
   const t1=track1(),t2=track2(),age1=gv('age1')||35,ret=gv('retireAge')||60;
   buildTL('fpa-tl',t1,fs,CLR.sky);
   buildTL('pa-tl',t2,ps,CLR.rose);
@@ -544,7 +571,7 @@ function renderCareerChart(){
   const retYear=CY+(ret-age1);
   for(let y=0;y<=yrs;y++){
     const cy=CY+y,isRetired=cy>=retYear;
-    const v1=isRetired?0:Math.round(salAt(s1,t1,fs,y)),v2=isRetired?0:Math.round(wifeSal(cy,s2,ps,y));
+    const v1=isRetired?0:Math.round(salAt(s1,t1,fs,y,null,fc)),v2=isRetired?0:Math.round(wifeSal(cy,s2,ps,y,null,null,pc));
     labels.push(age1+y);d1.push(v1);d2.push(v2);tot.push(v1+v2);
   }
   const c1name=el('career1')?.value||'You',c2name=el('career2')?.value||'Wife';
@@ -599,6 +626,7 @@ function renderHouses(){
         <div style="flex:2;min-width:100px"><label>Price ($)</label><input type="number" value="${h.price}" min="100000" oninput="houses[${i}].price=parseInt(this.value)||0"></div>
         <div style="flex:1;min-width:56px"><label>Down %</label><input type="number" value="${h.downPct}" min="3" max="100" oninput="houses[${i}].downPct=parseInt(this.value)||20"></div>
       </div><button class="delbtn" onclick="removeHouse(${h.id})">✕</button></div>`).join('');
+  const ha=el('homeAssumptions');if(ha)ha.style.display=houses.length?'block':'none';
 }
 function renderTL(){
   const e=el('life-tl');if(!e)return;
@@ -631,6 +659,7 @@ function projectNW(years,scenarioOverride){
   let ret=gv('ret401k')+gv('brokerage_ira'),brok=gv('brokerage'),hsa=gv('hsa'),college=gv('collegeFund'),debt=gv('debt');
   let existEq=gv('homeEquity'),ownsHome=existEq>0;
   const sal1=gv('sal1'),sal2=gv('sal2'),fs=sv('fpa-step'),ps=sv('pa-step');
+  const fc=sv('fpa-ceiling'),pc=sv('pa-ceiling');
   const retRate=gv('returnRate')/100-gv('feeRate')/100,infl=gv('inflation')/100,homeAppr=gv('homeAppreciation')/100;
   const mRate=gv('mortgageRate')/100,mTerm=gv('mortgageTerm')||30;
   const rent=gv('monthlyRent')*12,hp=gv('healthPremium');
@@ -646,7 +675,7 @@ function projectNW(years,scenarioOverride){
   for(let y=0;y<=yrs;y++){
     const cy=CY+y,inf=Math.pow(1+infl,y);
     const isRetired=cy>=retYear;
-    const v1=isRetired?0:salAt(sal1,t1,fs,y,infl),v2=isRetired?0:wifeSal(cy,sal2,ps,y,scenarioOverride,infl),gross=v1+v2;
+    const v1=isRetired?0:salAt(sal1,t1,fs,y,infl,fc),v2=isRetired?0:wifeSal(cy,sal2,ps,y,scenarioOverride,infl,pc),gross=v1+v2;
     const{p401,hsaC,iraC,brokC,colC}=computeContribs(gross,inf,cy<fky,P401_CAP*inf,HSA_CAP*inf,IRA_CAP*inf);
     const colCEff=isRetired?0:colC;
     const tax=estTax(gross,p401);
@@ -944,7 +973,7 @@ async function saveAll(){
   const snap={
     age1:gv('age1'),age2:gv('age2'),retireAge:gv('retireAge'),lifestyleMonthly:gv('lifestyleMonthly'),
     sal1:gv('sal1'),sal2:gv('sal2'),career1:el('career1')?.value,career2:el('career2')?.value,
-    fpaStep:sv('fpa-step'),paStep:sv('pa-step'),
+    fpaStep:sv('fpa-step'),paStep:sv('pa-step'),fpaCeiling:sv('fpa-ceiling'),paCeiling:sv('pa-ceiling'),
     ret401k:gv('ret401k'),brokerage:gv('brokerage'),brokerage_ira:gv('brokerage_ira'),hsa:gv('hsa'),homeEquity:gv('homeEquity'),collegeFund:gv('collegeFund'),debt:gv('debt'),
     monthlyRent:gv('monthlyRent'),healthPremium:gv('healthPremium'),
     flatSavingsPct:gv('flatSavingsPct'),
@@ -972,6 +1001,8 @@ async function loadAll(){
   populateProfessions('career2','Physician Assistant');
   populateSteps('fpa-step',track1(),0);
   populateSteps('pa-step',track2(),0);
+  populateCeiling('fpa-ceiling',track1());
+  populateCeiling('pa-ceiling',track2());
   try{
     const raw=await storageLoad(SK);
     if(raw){
@@ -989,6 +1020,8 @@ async function loadAll(){
       populateProfessions('career2',s.career2||'Physician Assistant');
       populateSteps('fpa-step',CAREERS[s.career1]||track1(),s.fpaStep||0);
       populateSteps('pa-step',CAREERS[s.career2]||track2(),s.paStep||0);
+      populateCeiling('fpa-ceiling',CAREERS[s.career1]||track1(),s.fpaCeiling);
+      populateCeiling('pa-ceiling',CAREERS[s.career2]||track2(),s.paCeiling);
       if(s.scenario)setScenario(s.scenario);
       sf('leave-start',s.leaveSt);sf('leave-dur',s.leaveDur);sf('leave-ret-pct',s.leaveRet);
       sf('pt-start',s.ptSt);sf('pt-pct',s.ptPct);sf('pt-end',s.ptEnd);

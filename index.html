@@ -191,7 +191,7 @@ input:disabled,select:disabled{opacity:.45;cursor:not-allowed}
         </div>
         <div style="display:grid;grid-template-columns:1.7fr 1fr 1fr .65fr .5fr;gap:6px;align-items:center;padding:8px 4px;border-bottom:0.5px solid var(--sand3)">
           <div style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px"><span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span>Home equity</div>
-          <div><input type="number" id="homeEquity" value="0" placeholder="0" oninput="updatePreview()"></div>
+          <div><input type="number" id="homeEquity" value="0" placeholder="0" oninput="updatePreview();syncHomeAssumptionsVisibility()"></div>
           <div style="grid-column:span 2;font-size:11px;color:var(--ink3);text-align:center">via purchases</div>
           <div></div>
         </div>
@@ -210,9 +210,11 @@ input:disabled,select:disabled{opacity:.45;cursor:not-allowed}
     <div class="pill p-clay">Spending &amp; assumptions</div>
     <div class="g2" style="margin-bottom:8px">
       <div>
-        <div class="row"><label for="lifestyleMonthly">Current lifestyle cost ($/mo)</label><input type="number" id="lifestyleMonthly" value="" placeholder="auto-estimated"></div>
+        <div style="font-size:10px;font-weight:500;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Monthly cost of living</div>
         <div class="row"><label for="monthlyRent">Rent ($/mo)</label><input type="number" id="monthlyRent" value="0" placeholder="0" oninput="updatePreview()"></div>
-        <div class="row"><label for="healthPremium">Health insurance ($/yr)</label><input type="number" id="healthPremium" value="0" placeholder="0" oninput="updatePreview()"></div>
+        <div class="row"><label for="healthPremium">Health insurance ($/mo)</label><input type="number" id="healthPremium" value="450" placeholder="450" oninput="updatePreview()"></div>
+        <div class="row"><label for="lifestyleMonthly">Everything else ($/mo)</label><input type="number" id="lifestyleMonthly" value="" placeholder="auto-estimated" oninput="updatePreview()"></div>
+        <div style="font-size:11px;color:var(--ink3);margin:-2px 0 9px;line-height:1.5">These three add up to your total monthly cost of living (shown below). Rent zeroes out once you own a home — replaced by the mortgage. Health insurance is a rough number if you don't know it exactly; it auto-adjusts once a spouse stops working or a kid arrives (set in Life events).</div>
       </div>
       <div>
         <div class="row"><label for="returnRate">Investment return (%/yr)</label><input type="number" id="returnRate" value="7" min="1" max="15" step="0.5"></div>
@@ -221,7 +223,7 @@ input:disabled,select:disabled{opacity:.45;cursor:not-allowed}
         <div class="row"><label for="homeAppreciation">Home appreciation (%/yr)</label><input type="number" id="homeAppreciation" value="3" min="0" max="10" step="0.5"></div>
       </div>
     </div>
-    <div style="font-size:11px;color:var(--ink3);margin-bottom:10px;line-height:1.5">Leave lifestyle cost blank to auto-estimate from your current spending (fixed costs + whatever isn't saved/taxed) — the forecast does <strong>not</strong> assume $0 retirement spending. Contribution amounts for each account are set above in Accounts, as either % of gross income or a flat $/yr. 401k, IRA and HSA respect their real annual caps (rising with inflation); HSA contributions stop the year your first kid arrives. Whatever isn't contributed or spent on fixed costs is assumed spent on living costs. Investment fees are subtracted from the return rate before compounding.</div>
+    <div style="font-size:11px;color:var(--ink3);margin-bottom:10px;line-height:1.5">Leave "Everything else" blank to auto-estimate from your current spending (rent + health insurance + whatever isn't saved/taxed) — the forecast does <strong>not</strong> assume $0 retirement spending. Contribution amounts for each account are set above in Accounts, as either % of gross income or a flat $/yr. 401k, IRA and HSA respect their real annual caps (rising with inflation); HSA contributions stop the year your first kid arrives. Investment fees are subtracted from the return rate before compounding.</div>
     <div id="sprv" class="sprv" style="color:var(--ink3)">Enter salaries in Careers and contribution amounts in Accounts to see your annual breakdown.</div>
   </div>
   <button class="nbtn" onclick="showTab('life',null)">Plan life events →</button>
@@ -234,19 +236,30 @@ input:disabled,select:disabled{opacity:.45;cursor:not-allowed}
       <div class="pill p-rose">Kids</div>
       <div id="kids-list" class="evl"></div>
       <button class="addbtn" onclick="addKid()"><span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"></circle><path d="M5.5 21c0-4 3-7 6.5-7s6.5 3 6.5 7"></path></svg></span> Add a kid</button>
-      <div style="font-size:11px;color:var(--ink3);margin-top:10px;line-height:1.6">Enter the year you expect each child. Childcare ($18k/yr) applies for 5 years. Maternity leave cost applied in birth year.</div>
+      <div style="font-size:11px;color:var(--ink3);margin-top:10px;line-height:1.6">Enter the year you expect each child. Childcare ($18k/yr) applies for 5 years. Maternity leave cost applied in birth year. Ongoing costs, the health-insurance bump, and life insurance below apply on top of that.</div>
+      <div class="row" style="margin-top:12px;padding-top:12px;border-top:0.5px solid var(--sand3)"><label for="kidAnnualCost">Cost per kid, ages 0–18 ($/yr)</label><input type="number" id="kidAnnualCost" value="9000" min="0" oninput="updatePreview()"></div>
+      <div style="font-size:11px;color:var(--ink3);margin:-4px 0 9px;line-height:1.5">Food, clothing, activities, and other day-to-day costs — on top of childcare (0–5) and college (18–22).</div>
+      <div class="row"><label for="healthFamilyBump">Health premium increase, first kid ($/yr)</label><input type="number" id="healthFamilyBump" value="6500" min="0" oninput="updatePreview()"></div>
+      <div style="font-size:11px;color:var(--ink3);margin:-4px 0 9px;line-height:1.5">Most plans jump straight to a "family" tier once you have any kids, rather than scaling per kid.</div>
+      <div class="row"><label for="lifeInsurance">Life insurance once kids arrive ($/yr)</label><input type="number" id="lifeInsurance" value="700" min="0" oninput="updatePreview()"></div>
       <div class="row" style="margin-top:12px;padding-top:12px;border-top:0.5px solid var(--sand3)"><label for="collegePerKid">College cost per kid ($/yr)</label><input type="number" id="collegePerKid" value="30000"></div>
     </div>
     <div class="card">
       <div class="pill p-clay">Home purchases</div>
       <div id="houses-list" class="evl"></div>
       <button class="addbtn" onclick="addHouse()"><span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span> Add a home purchase</button>
-      <div style="font-size:11px;color:var(--ink3);margin-top:10px;line-height:1.6">Down payment pulled from savings. Mortgage replaces rent. Full property value appreciates from purchase year.</div>
+      <div style="font-size:11px;color:var(--ink3);margin-top:10px;line-height:1.6">Down payment pulled from savings. Mortgage replaces rent. Full property value appreciates from purchase year. Property tax, insurance, and maintenance below apply every year you own, on top of the mortgage payment.</div>
       <div id="homeAssumptions" style="display:none;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--sand3)">
         <div style="font-size:10px;font-weight:500;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Mortgage assumptions</div>
-        <div class="g2" style="margin-bottom:0">
+        <div class="g2" style="margin-bottom:8px">
           <div><div class="row"><label for="mortgageRate">Mortgage rate (%)</label><input type="number" id="mortgageRate" value="6.5" min="1" max="15" step="0.1"></div></div>
           <div><div class="row"><label for="mortgageTerm">Mortgage term (years)</label><input type="number" id="mortgageTerm" value="30" min="10" max="30" step="5"></div></div>
+        </div>
+        <div style="font-size:10px;font-weight:500;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Ongoing ownership costs (%/yr of home value)</div>
+        <div class="g3" style="margin-bottom:0">
+          <div><label for="propTaxRate">Property tax</label><input type="number" id="propTaxRate" value="1.1" min="0" max="5" step="0.1" oninput="updatePreview()"></div>
+          <div><label for="homeInsRate">Homeowners insurance</label><input type="number" id="homeInsRate" value="0.45" min="0" max="3" step="0.05" oninput="updatePreview()"></div>
+          <div><label for="maintRate">Maintenance</label><input type="number" id="maintRate" value="1.5" min="0" max="5" step="0.1" oninput="updatePreview()"></div>
         </div>
       </div>
     </div>
@@ -502,7 +515,7 @@ function checkAges(){
 // Used both by the live Profile-tab preview and (via estimateCurrentSpend) as the forecast's fallback
 // retirement-spending assumption when the user hasn't set one explicitly.
 function computeSpendBreakdown(){
-  const s1=gv('sal1'),s2=gv('sal2'),rent=gv('monthlyRent')*12,hp=gv('healthPremium');
+  const s1=gv('sal1'),s2=gv('sal2'),rent=gv('monthlyRent')*12,hp=gv('healthPremium')*12;
   const gross=s1+s2;
   if(!gross)return null;
   const hsaEligible=CY<firstKidYear();
@@ -510,8 +523,12 @@ function computeSpendBreakdown(){
   const tax=estTax(gross,p401),take=gross-tax;
   const hasHome=gv('homeEquity')>0,fixedCosts=(hasHome?0:rent)+hp;
   const contribs=p401+iraC+hsaC+colC+brokC;
-  const sur=take-fixedCosts-contribs;
-  return{gross,tax,take,hasHome,fixedCosts,contribs,sur,p401,hsaC,iraC,brokC,colC,hsaEligible};
+  // If the user has entered an explicit "everything else" cost, treat it as real spending and
+  // check it against what's actually left — rather than always backing into "leftover = spending".
+  const other=gv('lifestyleMonthly')*12,hasOther=other>0;
+  const costOfLiving=fixedCosts+other;
+  const sur=take-contribs-(hasOther?costOfLiving:fixedCosts);
+  return{gross,tax,take,hasHome,rent,hp,fixedCosts,contribs,sur,p401,hsaC,iraC,brokC,colC,hsaEligible,hasOther,other,costOfLiving};
 }
 // Fallback retirement lifestyle-cost estimate: today's fixed costs plus whatever isn't
 // saved/taxed, i.e. the same "assumed spent on everything else" figure shown in the preview.
@@ -526,10 +543,18 @@ function updatePreview(){
   if(!b){sp.style.color='var(--ink3)';sp.innerHTML='Enter salaries in Careers and contribution amounts in Accounts to see your annual breakdown.';return;}
   sp.style.color=b.sur>=0?'var(--sage)':'var(--clay)';
   const flatNote=gv('flatSavingsPct')>0?`<div style="font-size:11px;color:var(--ink3);margin-bottom:4px">Using a flat ${gv('flatSavingsPct')}% savings rate — waterfalled HSA → IRA → 401k → Brokerage.</div>`:'';
+  const colParts=`${fK(b.hasHome?0:b.rent)} rent + ${fK(b.hp)} insurance${b.hasOther?' + '+fK(b.other)+' other':''}`;
+  const colLine=b.hasOther
+    ?`<strong>Total cost of living:</strong> ${fK(b.costOfLiving)}/yr (${fK(b.costOfLiving/12)}/mo) — ${colParts}`
+    :`<strong>Fixed costs${b.hasHome?'':' (incl. rent)'}:</strong> ${fK(b.fixedCosts)}/yr — ${colParts}`;
   sp.innerHTML=flatNote+`<strong>Gross:</strong> ${fK(b.gross)}/yr &nbsp;|&nbsp; <strong>Taxes:</strong> ${fK(b.tax)}/yr &nbsp;|&nbsp; <strong>Take-home:</strong> ${fK(b.take)}/yr &nbsp;|&nbsp; <strong>Total contributed:</strong> ${fK(b.contribs)}/yr<br>`+
     `<span style="font-size:11px;opacity:.8">401k ${fK(b.p401)} · HSA ${fK(b.hsaC)}${b.hsaEligible?'':' (stopped — kid on the way)'} · IRA ${fK(b.iraC)} · Brokerage ${fK(b.brokC)} · 529 ${fK(b.colC)}</span><br>`+
-    `<strong>Fixed costs${b.hasHome?'':' (incl. rent)'}:</strong> ${fK(b.fixedCosts)}/yr &nbsp;|&nbsp; `+
-    (b.sur>=0?`<strong style="color:var(--sage)">Assumed spent on everything else: ${fK(b.sur)}/yr (${fK(b.sur/12)}/mo)</strong>`:`<strong style="color:var(--clay)">Deficit: ${fK(Math.abs(b.sur))}/yr — contributions + fixed costs exceed take-home</strong>`);
+    colLine+`<br>`+
+    (b.sur>=0
+      ?`<strong style="color:var(--sage)">${b.hasOther?'Leftover after cost of living':'Assumed spent on everything else'}: ${fK(b.sur)}/yr (${fK(b.sur/12)}/mo)</strong>`
+      :(b.hasOther
+        ?`<strong style="color:var(--clay)">⚠ Unrealistic: that savings rate plus your ${fK(b.costOfLiving/12)}/mo cost of living exceeds take-home by ${fK(Math.abs(b.sur))}/yr (${fK(Math.abs(b.sur)/12)}/mo). Lower the savings rate or the "everything else" cost.</strong>`
+        :`<strong style="color:var(--clay)">Deficit: ${fK(Math.abs(b.sur))}/yr — contributions + fixed costs exceed take-home</strong>`));
 }
 
 function populateProfessions(sid,def){
@@ -626,7 +651,10 @@ function renderHouses(){
         <div style="flex:2;min-width:100px"><label>Price ($)</label><input type="number" value="${h.price}" min="100000" oninput="houses[${i}].price=parseInt(this.value)||0"></div>
         <div style="flex:1;min-width:56px"><label>Down %</label><input type="number" value="${h.downPct}" min="3" max="100" oninput="houses[${i}].downPct=parseInt(this.value)||20"></div>
       </div><button class="delbtn" onclick="removeHouse(${h.id})">✕</button></div>`).join('');
-  const ha=el('homeAssumptions');if(ha)ha.style.display=houses.length?'block':'none';
+  syncHomeAssumptionsVisibility();
+}
+function syncHomeAssumptionsVisibility(){
+  const ha=el('homeAssumptions');if(ha)ha.style.display=(houses.length||gv('homeEquity')>0)?'block':'none';
 }
 function renderTL(){
   const e=el('life-tl');if(!e)return;
@@ -662,16 +690,19 @@ function projectNW(years,scenarioOverride){
   const fc=sv('fpa-ceiling'),pc=sv('pa-ceiling');
   const retRate=gv('returnRate')/100-gv('feeRate')/100,infl=gv('inflation')/100,homeAppr=gv('homeAppreciation')/100;
   const mRate=gv('mortgageRate')/100,mTerm=gv('mortgageTerm')||30;
-  const rent=gv('monthlyRent')*12,hp=gv('healthPremium');
+  const rent=gv('monthlyRent')*12,hp=gv('healthPremium')*12;
   const fky=firstKidYear();
   const collegePerKid=gv('collegePerKid');
   const matLeave=15000,childcare=18000;
+  const kidAnnualCost=gv('kidAnnualCost'),healthFamilyBump=gv('healthFamilyBump'),lifeInsuranceCost=gv('lifeInsurance');
+  const homeCarryPct=(gv('propTaxRate')+gv('homeInsRate')+gv('maintRate'))/100;
   const t1=track1(),t2=track2();
   const retYear=CY+(retAge-age1);
   // If the user hasn't set an explicit retirement lifestyle cost, fall back to an estimate of
   // current annual spending rather than assuming $0 spending in retirement.
   const lifestyle=(gv('lifestyleMonthly')*12)||estimateCurrentSpend();
   let props=[],data=[],warnings=[],totalPenalty=0,depletedFlagged=false;
+  let shortfallYears=0,shortfallFirstYear=null,shortfallMax=0;
   for(let y=0;y<=yrs;y++){
     const cy=CY+y,inf=Math.pow(1+infl,y);
     const isRetired=cy>=retYear;
@@ -679,10 +710,11 @@ function projectNW(years,scenarioOverride){
     const{p401,hsaC,iraC,brokC,colC}=computeContribs(gross,inf,cy<fky,P401_CAP*inf,HSA_CAP*inf,IRA_CAP*inf);
     const colCEff=isRetired?0:colC;
     const tax=estTax(gross,p401);
-    const healthAdj=(v2<=0?hp*1.6:hp)*inf;
+    const healthAdj=((v2<=0?hp*1.6:hp)+(cy>=fky?healthFamilyBump:0))*inf;
     let surplus=gross-tax-(ownsHome?0:rent*inf)-healthAdj-p401-iraC-hsaC-brokC-colCEff;
     if(isRetired)surplus-=lifestyle*inf;
-    kids.forEach(k=>{if(k.year===cy)surplus-=matLeave;const ka=cy-k.year;if(ka>=0&&ka<5)surplus-=childcare*inf;});
+    if(cy>=fky)surplus-=lifeInsuranceCost*inf;
+    kids.forEach(k=>{if(k.year===cy)surplus-=matLeave;const ka=cy-k.year;if(ka>=0&&ka<5)surplus-=childcare*inf;if(ka>=0&&ka<18)surplus-=kidAnnualCost*inf;});
     houses.forEach(h=>{
       if(h.year===cy){
         const wantDp=h.price*(h.downPct/100),dp=Math.min(wantDp,brok),loan=h.price-dp;
@@ -692,9 +724,10 @@ function projectNW(years,scenarioOverride){
     });
     existEq*=(1+homeAppr);
     let homeNW=existEq;
+    if(existEq>0)surplus-=existEq*homeCarryPct;
     props.forEach(p=>{
       const yp=cy-p.year,val=p.price*Math.pow(1+homeAppr,yp),bal=mtgBal(p.loan,mRate,mTerm,yp),pmt=mtgPmt(p.loan,mRate,mTerm)*12;
-      surplus-=pmt;homeNW+=Math.max(0,val-bal);
+      surplus-=pmt;surplus-=val*homeCarryPct;homeNW+=Math.max(0,val-bal);
     });
     // College: tuition draws from the 529 first; any shortfall flows into the general deficit below
     let collegeNeed=0;
@@ -707,27 +740,34 @@ function projectNW(years,scenarioOverride){
     const debtMinPmt=Math.min(debt,debtInterest+debt*0.03);
     surplus-=debtMinPmt;
     debt=Math.max(0,debt+debtInterest-debtMinPmt);
-    // Deficit draws from brokerage first, then HSA, then retirement if both are exhausted.
-    // Any leftover beyond the savings-rate allocation is assumed spent, NOT reinvested.
+    // Deficit draws from brokerage first, then HSA. Any leftover beyond the savings-rate
+    // allocation is assumed spent, NOT reinvested.
     let deficit=Math.max(0,-surplus);
     const brokDraw=Math.min(deficit,brok);
     brok-=brokDraw;deficit-=brokDraw;
     // HSA withdrawals are always penalty-free for medical costs, and after 65 are taxed like
-    // ordinary income with no penalty for any use — so HSA fills the gap next, ahead of
-    // triggering the 401k/IRA early-withdrawal penalty below.
+    // ordinary income with no penalty for any use — so HSA fills the gap next.
     const hsaDraw=Math.min(deficit,hsa);
     hsa-=hsaDraw;deficit-=hsaDraw;
-    // Withdrawals from 401k/IRA before 59.5 incur the real 10% early-withdrawal penalty —
-    // withdraw enough gross to net the remaining deficit after that penalty.
-    const ageNow=age1+y,earlyWithdrawal=deficit>0&&ageNow<59.5;
-    const retGrossNeeded=earlyWithdrawal?deficit/0.9:deficit;
-    const retDraw=Math.min(retGrossNeeded,ret);
-    const penalty=earlyWithdrawal?retDraw*0.1:0;
-    ret-=retDraw;deficit-=(retDraw-penalty);
-    totalPenalty+=penalty;
-    if(isRetired&&deficit>0.5&&!depletedFlagged){
-      depletedFlagged=true;
-      warnings.push({year:cy,type:'depleted',msg:`In ${cy} (age ${ageNow}), brokerage and retirement accounts were both exhausted and couldn't fully cover living expenses.`});
+    const ageNow=age1+y;
+    if(isRetired){
+      // Only tap 401k/IRA once actually retired — withdrawals before 59.5 incur the real 10%
+      // early-withdrawal penalty, and a working household wouldn't eat that penalty just to
+      // smooth pre-retirement cash flow, so pre-retirement deficits never reach this branch.
+      const earlyWithdrawal=deficit>0&&ageNow<59.5;
+      const retGrossNeeded=earlyWithdrawal?deficit/0.9:deficit;
+      const retDraw=Math.min(retGrossNeeded,ret);
+      const penalty=earlyWithdrawal?retDraw*0.1:0;
+      ret-=retDraw;deficit-=(retDraw-penalty);
+      totalPenalty+=penalty;
+      if(deficit>0.5&&!depletedFlagged){
+        depletedFlagged=true;
+        warnings.push({year:cy,type:'depleted',msg:`In ${cy} (age ${ageNow}), brokerage and retirement accounts were both exhausted and couldn't fully cover living expenses.`});
+      }
+    }else if(deficit>0.5){
+      shortfallYears++;
+      if(shortfallFirstYear==null)shortfallFirstYear=cy;
+      shortfallMax=Math.max(shortfallMax,deficit);
     }
     // Grow each account by return rate, then add contributions
     ret=ret*(1+retRate)+p401+iraC;
@@ -737,6 +777,7 @@ function projectNW(years,scenarioOverride){
     data.push({y,cy,nw:ret+brok+hsa+homeNW+college-debt,ret,brok,hsa,home:homeNW,college,debt,sav:Math.round(brokC),gross:Math.round(gross)});
   }
   if(totalPenalty>0.5)warnings.push({type:'penalty',msg:`Retiring at age ${retAge} means some 401k/IRA withdrawals happen before 59½ — modeled with the real 10% early-withdrawal penalty, costing an estimated ${fK(totalPenalty)} in penalties over the projection.`});
+  if(shortfallYears>0)warnings.push({year:shortfallFirstYear,type:'shortfall',msg:`In ${shortfallYears} working year${shortfallYears>1?'s':''}, starting ${shortfallFirstYear}, contributions plus fixed and life-event costs exceed take-home pay even after brokerage and HSA are drained — short by up to ${fK(shortfallMax)} in the worst year. This model doesn't dip into 401k/IRA early to plug that gap (that would mean paying the 10% penalty just to smooth cash flow while still working), so in reality you'd need to save less, cut spending, or borrow in those years.`});
   return{data,warnings};
 }
 
@@ -891,6 +932,9 @@ function renderForecast(){
   baseWarnings.filter(w=>w.type==='downpayment').forEach(w=>{
     checks.push({s:'yellow',title:'Home purchase down payment shortfall',msg:w.msg});
   });
+  baseWarnings.filter(w=>w.type==='shortfall').forEach(w=>{
+    checks.push({s:'red',title:'Cash shortfall in working years',msg:w.msg});
+  });
   baseWarnings.filter(w=>w.type==='penalty').forEach(w=>{
     checks.push({s:'yellow',title:'Early-withdrawal penalty applies',msg:w.msg});
   });
@@ -985,6 +1029,8 @@ async function saveAll(){
     colContrib:gv('colContrib'),colContribUnit:unitOf('colContribUnit'),
     returnRate:gv('returnRate'),inflation:gv('inflation'),homeAppreciation:gv('homeAppreciation'),
     mortgageRate:gv('mortgageRate'),mortgageTerm:gv('mortgageTerm'),collegePerKid:gv('collegePerKid'),
+    kidAnnualCost:gv('kidAnnualCost'),healthFamilyBump:gv('healthFamilyBump'),lifeInsurance:gv('lifeInsurance'),
+    propTaxRate:gv('propTaxRate'),homeInsRate:gv('homeInsRate'),maintRate:gv('maintRate'),
     scenario,
     leaveSt:gv('leave-start'),leaveDur:gv('leave-dur'),leaveRet:gv('leave-ret-pct'),
     ptSt:gv('pt-start'),ptPct:gv('pt-pct'),ptEnd:gv('pt-end'),
@@ -1008,9 +1054,13 @@ async function loadAll(){
     if(raw){
       const s=JSON.parse(raw);
       ['age1','age2','retireAge','sal1','sal2','ret401k','brokerage','brokerage_ira','hsa','homeEquity','collegeFund','debt',
-       'healthPremium','flatSavingsPct',
+       'flatSavingsPct',
        'ret401kContrib','iraContrib','hsaContrib','brokContrib','colContrib',
-       'returnRate','inflation','homeAppreciation','mortgageRate','mortgageTerm','collegePerKid'].forEach(f=>sf(f,s[f]));
+       'returnRate','inflation','homeAppreciation','mortgageRate','mortgageTerm','collegePerKid',
+       'kidAnnualCost','healthFamilyBump','lifeInsurance','propTaxRate','homeInsRate','maintRate'].forEach(f=>sf(f,s[f]));
+      // healthPremium used to be stored as $/yr; it's now $/mo. A saved value implausibly large
+      // for a monthly premium (old annual figures are typically $5k+) gets divided by 12 once.
+      if(s.healthPremium!=null)sf('healthPremium',s.healthPremium>3000?Math.round(s.healthPremium/12):s.healthPremium);
       ['ret401kContribUnit','iraContribUnit','hsaContribUnit','brokContribUnit','colContribUnit'].forEach(f=>sf(f,s[f]));
       // Legacy saves stored an annual rent/lifestyle-cost figure; migrate them to the new monthly inputs.
       sf('monthlyRent',s.monthlyRent!=null?s.monthlyRent:(s.annualRent!=null?Math.round(s.annualRent/12):null));
@@ -1031,6 +1081,7 @@ async function loadAll(){
     }
   }catch(e){console.error(e);}
   reconcileAcctInputs();
+  syncHomeAssumptionsVisibility();
   renderCareerChart();
   checkAges();
 }

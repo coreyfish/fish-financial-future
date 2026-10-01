@@ -459,7 +459,7 @@ function project(sk){
     if(!retired) out.cashSaved+=saved-drawn;
 
     rows.push({cy,age:myAge,herAge:age2+y,retired,iRet,sRet,gross,inc1,inc2,tax:t,housing,care,
-      kidEveryday,collegeNow,living,surplus,saved,slack,drawn,kidsHome,
+      kidEveryday,collegeNow,living,surplus,saved,slack,drawn,kidsHome,room:surplus-planSave,
       nw:assets+Math.max(0,homeVal-mortLeft)-debt,assets,home:Math.max(0,homeVal-mortLeft),debt});
   }
   const atRet=rows.find(r=>r.retired)||rows[rows.length-1];
@@ -570,28 +570,35 @@ function drawFlow(r){
 
 function drawVerdict(res){
   const base=res[0], stop=res.find(r=>r.k==='stop'), part=res.find(r=>r.k==='part');
-  const peakCare=Math.max(...base.rows.map(r=>r.care));
-  const costOfStopping=base.nwAtRet-stop.nwAtRet;
-  const earnGap=base.wifeEarned-stop.wifeEarned;
-  const careSaved=base.careSpent-stop.careSpent;
-  const changeY=iv('chg_stop')||CY;
-  let h='';
-  if(earnGap<1000){
-    h+=`<div class="note">Her career change in ${changeY} barely moves the numbers — either her salary is near zero or she retires around then anyway. Check her salary and retirement age.</div>`;
-  }else{
-    const cashGap=base.cashSaved-stop.cashSaved;
-    const keep=Math.round(cashGap/Math.max(1,earnGap)*100);
-    h+=`<div class="note">Working on from ${changeY} brings in <b>${fK(earnGap)}</b> of gross pay. Childcare takes <b>${fK(careSaved)}</b> of it and taxes take a bite of what's left, so about <b>${keep}&cent; on the dollar</b> — <b>${fK(cashGap)}</b> in all — actually reaches your savings. Left to compound, that becomes <b>${fK(costOfStopping)}</b> of net worth by ${base.hhRetAge}. That is the real price of her stopping.</div>`;
-    if(peakCare>0)h+=`<div class="note">Childcare peaks at <b>${fK(peakCare)}/yr</b>. ${part.nwAtRet>stop.nwAtRet+costOfStopping*0.45?`Part time keeps <b>${Math.round((part.nwAtRet-stop.nwAtRet)/Math.max(1,costOfStopping)*100)}%</b> of the financial upside of working full time while cutting childcare hours — usually the best deal on this page.`:`Part time doesn't buy back much here, because her pay drops faster than the childcare bill does.`}</div>`;
-    else h+=`<div class="note">No childcare in the plan — with no kids young enough to need it, the scenarios differ by her pay alone, so working full time simply wins. Add kids to see the real trade-off.</div>`;
+  const sr=n('savRate'), r50=v=>f0(Math.round(Math.abs(v)/50)*50);
+  let h=`<div class="hint" style="margin:0 0 12px"><b>Room</b> is what's left each month after taxes, housing, living costs, kids, and your ${sr}% savings target. Positive means breathing room. A gap means the plan doesn't fit, and you'd have to save less or spend less to close it.</div>`;
+
+  // one block per scenario: how much room there is, where it's tightest, and how it ends
+  res.forEach(r=>{
+    const wk=r.rows.filter(x=>!x.retired);
+    if(!wk.length)return;
+    const avg=wk.reduce((a,x)=>a+x.room,0)/wk.length/12;
+    const tight=wk.reduce((m,x)=>x.room<m.room?x:m,wk[0]), gapYrs=wk.filter(x=>x.room<0).length;
+    const t=tight.room/12;
+    const head=avg>=0?`About <b>${r50(avg)}/mo of room</b> in a typical working year`
+                     :`A gap of about <b>${r50(avg)}/mo</b> in a typical working year`;
+    const worst=t>=0?`Tightest year is ${tight.cy} (age ${tight.age}), and there's still ${r50(t)}/mo of room.`
+                    :`Tightest year is ${tight.cy} (age ${tight.age}), short by ${r50(t)}/mo`+(gapYrs>1?` &mdash; and short in ${gapYrs} of ${wk.length} working years.`:'.');
+    const solo=tight.iRet!==tight.sRet?` Only ${tight.iRet?'she':'he'} is still working that year.`:'';
+    const end=r.broke!=null?`Savings run out at age ${r.broke}.`
+                           :`Savings last past ${A.endAge}, with ${fK(r.nwAtRet)} at retirement (age ${r.hhRetAge}).`;
+    h+=`<div class="note" style="border-color:${gapYrs>0||r.broke!=null?'#b1462f':r.c}"><b style="color:${r.c}">${r.nm}</b><br>${head}. ${worst}${solo}<br>${end}</div>`;
+  });
+
+  // how the scenarios compare
+  const earnGap=base.wifeEarned-stop.wifeEarned, peakCare=Math.max(...base.rows.map(r=>r.care));
+  if(earnGap>=1000){
+    const cashGap=base.cashSaved-stop.cashSaved, cost=base.nwAtRet-stop.nwAtRet, careSaved=base.careSpent-stop.careSpent;
+    h+=`<div class="note"><b>What stopping costs.</b> Her extra years of work add ${fK(earnGap)} in pay. After ${fK(careSaved)} of childcare and taxes, about ${fK(cashGap)} of that reaches savings, which grows to <b>${fK(cost)}</b> by retirement.`+
+       (peakCare>0?` Childcare peaks at ${fK(peakCare)}/yr. `+(part.nwAtRet>stop.nwAtRet+cost*0.45
+          ?`Part time keeps about ${Math.round((part.nwAtRet-stop.nwAtRet)/Math.max(1,cost)*100)}% of that upside while cutting childcare hours.`
+          :`Part time recovers little, because her pay drops faster than the childcare bill does.`):'')+`</div>`;
   }
-  const slackShare=base.slack/Math.max(1,base.slack+base.cashSaved);
-  if(slackShare>0.2)h+=`<div class="note">You have headroom: about <b>${fK(base.slack)}</b> over the career drifts past your ${n('savRate')}% savings rate and is assumed absorbed by lifestyle. Lifting the savings rate turns that into net worth without anyone changing jobs &mdash; worth weighing against the scenarios above.</div>`;
-  const bad=res.filter(r=>r.broke!=null);
-  if(bad.length)h+=`<div class="note" style="border-color:#b1462f">Money runs out before age ${A.endAge} in: ${bad.map(r=>`<b>${r.nm}</b> (age ${r.broke})`).join(', ')}. Retiring later, spending less, or saving more fixes it.</div>`;
-  const sq=res.filter(r=>r.squeeze>0);
-  if(sq.length)h+=`<div class="note">Cash is tight — the plan can't hit its ${n('savRate')}% savings rate — for some working years in: ${sq.map(r=>`<b>${r.nm}</b> (${r.squeeze} yr, from ${r.firstSqueeze})`).join(', ')}.</div>`;
-  if(!bad.length&&!sq.length)h+=`<div class="note">Every scenario holds up: savings last past age ${A.endAge} and you hit your savings rate every working year. The choice is about life, not solvency.</div>`;
   el('verdict').innerHTML=h;
 }
 

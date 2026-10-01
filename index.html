@@ -257,6 +257,8 @@ const A={
   homeCarry:0.026,     // property tax + insurance + maintenance, share of value per year
   sellCost:0.06,       // agent fees and closing costs when a home is sold
   borrowRate:0.08,     // real rate on money borrowed to cover a shortfall
+  retShare:0.6,        // share of savings held in retirement accounts (401k/IRA); the rest is cash and brokerage
+  unlockAge:60,        // retirement accounts open penalty-free at 59.5; the younger spouse's age is used for the joint pool
   slackSaved:0.5,      // of the cash left over beyond the savings target, the share that gets banked
                        // rather than absorbed by lifestyle. Nobody saves all of it; nobody spends all of it.
   endAge:92            // how long the money has to last
@@ -367,14 +369,15 @@ function project(sk){
   const births=kids.map(k=>k.year).sort((a,b)=>a-b);
   const buys=houses.map(h=>({...h})).sort((a,b)=>a.year-b.year);
 
-  let assets=n('assets'), debt=0;
+  let acc=n('assets')*(1-A.retShare), ret=n('assets')*A.retShare, debt=0;   // acc = cash & brokerage, ret = 401k/IRA
   const ownsNow=el('ownNow').checked;
   let homeVal=ownsNow?n('homeVal'):0;
   let mortLeft=ownsNow?Math.min(n('mortBal'),n('homeVal')):0;
   let pmt=ownsNow?n('mortPmt')*12:0;
 
+  const firstRetY=Math.min(retY1,retY2), unlockY=CY+(A.unlockAge-Math.min(age1,age2));
   const rows=[], out={k:sk,nm:sc.nm,sub:sc.sub,c:sc.c,rows,wifeEarned:0,careSpent:0,
-    cashSaved:0,slack:0,broke:null,squeeze:0,firstSqueeze:null,retA1,retA2,hhRetAge:age1+(hhRetY-CY)};
+    cashSaved:0,slack:0,penalty:0,bridge:{need:0,have:0},broke:null,squeeze:0,firstSqueeze:null,retA1,retA2,hhRetAge:age1+(hhRetY-CY)};
 
   for(let y=0;y<=years;y++){
     const cy=CY+y, myAge=age1+y;
@@ -414,9 +417,9 @@ function project(sk){
     /* --- housing. Any purchase scheduled for this year happens first: an existing home is
        sold and its equity rolled into savings, then the down payment comes out. --- */
     buys.filter(h=>h.year===cy).forEach(h=>{
-      if(homeVal>0){ assets+=Math.max(0,homeVal*(1-A.sellCost)-mortLeft); mortLeft=0; }
-      const want=h.price*(h.down/100), down=Math.min(want,Math.max(0,assets));
-      assets-=down; homeVal=h.price; mortLeft=Math.max(0,h.price-down);
+      if(homeVal>0){ acc+=Math.max(0,homeVal*(1-A.sellCost)-mortLeft); mortLeft=0; }
+      const want=h.price*(h.down/100), down=Math.min(want,Math.max(0,acc));
+      acc-=down; homeVal=h.price; mortLeft=Math.max(0,h.price-down);
       pmt=mortPayment(mortLeft,A.mortRate,A.mortTerm)*12;
     });
     let housing;
@@ -451,10 +454,25 @@ function project(sk){
     }
     out.slack+=slack;
     const match=retired?0:Math.min(planSave,gross*0.03);     // typical 3% employer 401k match
-    assets=assets*(1+A.realReturn)+saved+match-drawn;
-    if(assets<0){debt-=assets;assets=0;}
+    acc*=1+A.realReturn; ret*=1+A.realReturn;
+    acc+=saved*(1-A.retShare); ret+=saved*A.retShare+match;
+    if(cy===firstRetY) out.bridge.have=acc;           // accessible money the moment the first of you stops
+    if(drawn>0){
+      // shortfalls come from cash and brokerage first; retirement accounts only after they open,
+      // or earlier with the 10% early-withdrawal penalty
+      let need=drawn;
+      const fromAcc=Math.min(need,acc); acc-=fromAcc; need-=fromAcc;
+      if(need>0.5){
+        if(cy>=unlockY){const t=Math.min(need,ret); ret-=t; need-=t;}
+        else{const gross=Math.min(need/0.9,ret); ret-=gross; need-=gross*0.9; out.penalty+=gross*0.1;}
+      }
+      if(need>0.5) debt+=need;
+      if(cy>=firstRetY&&cy<unlockY) out.bridge.need+=drawn;
+    }
     debt*=(1+A.borrowRate);
-    if(debt>0&&assets>0){const p=Math.min(debt,assets);debt-=p;assets-=p;}
+    if(debt>0&&acc>0){const p=Math.min(debt,acc);debt-=p;acc-=p;}
+    if(debt>0&&ret>0){const p=Math.min(debt,ret);debt-=p;ret-=p;}
+    const assets=acc+ret;
     if(out.broke===null&&retired&&assets<=0&&debt>0) out.broke=myAge;
     if(!retired) out.cashSaved+=saved-drawn;
 
@@ -462,6 +480,9 @@ function project(sk){
       kidEveryday,collegeNow,living,surplus,saved,slack,drawn,kidsHome,room:surplus-planSave,
       nw:assets+Math.max(0,homeVal-mortLeft)-debt,assets,home:Math.max(0,homeVal-mortLeft),debt});
   }
+  Object.assign(out.bridge,{has:firstRetY<unlockY&&firstRetY<=CY+years,firstY:firstRetY,unlockY,
+    who:retY1<retY2?'He':retY2<retY1?'She':'Both of you',both:retY1===retY2,
+    age:retY1<=retY2?retA1:retA2,unlockAge:A.unlockAge});
   const atRet=rows.find(r=>r.retired)||rows[rows.length-1];
   out.nwAtRet=atRet?atRet.nw:0;
   out.last=rows[rows.length-1];
@@ -571,26 +592,36 @@ function drawFlow(r){
 function drawVerdict(res){
   const base=res[0], stop=res.find(r=>r.k==='stop'), part=res.find(r=>r.k==='part');
   const sr=n('savRate'), r50=v=>f0(Math.round(Math.abs(v)/50)*50);
-  let h=`<div class="hint" style="margin:0 0 12px"><b>Room</b> is what's left each month after taxes, housing, living costs, kids, and your ${sr}% savings target. Positive means breathing room. A gap means the plan doesn't fit, and you'd have to save less or spend less to close it.</div>`;
+  let h=`<div class="hint" style="margin:0 0 12px"><b>Room</b> is what's left each month after taxes, housing, living costs, kids, and your ${sr}% savings target. A gap means the plan can't hit that target, or spends more than comes in and has to draw on savings. Savings are assumed to be ${Math.round(A.retShare*100)}% retirement accounts (locked until ${A.unlockAge}) and the rest cash and brokerage.</div>`;
 
-  // one block per scenario: how much room there is, where it's tightest, and how it ends
   res.forEach(r=>{
     const wk=r.rows.filter(x=>!x.retired);
     if(!wk.length)return;
     const avg=wk.reduce((a,x)=>a+x.room,0)/wk.length/12;
     const tight=wk.reduce((m,x)=>x.room<m.room?x:m,wk[0]), gapYrs=wk.filter(x=>x.room<0).length;
-    const t=tight.room/12;
     const head=avg>=0?`About <b>${r50(avg)}/mo of room</b> in a typical working year`
                      :`A gap of about <b>${r50(avg)}/mo</b> in a typical working year`;
-    const worst=t>=0?`Tightest year is ${tight.cy} (age ${tight.age}), and there's still ${r50(t)}/mo of room.`
-                    :`Tightest year is ${tight.cy} (age ${tight.age}), short by ${r50(t)}/mo`+(gapYrs>1?` &mdash; and short in ${gapYrs} of ${wk.length} working years.`:'.');
-    const solo=tight.iRet!==tight.sRet?` Only ${tight.iRet?'she':'he'} is still working that year.`:'';
-    const end=r.broke!=null?`Savings run out at age ${r.broke}.`
-                           :`Savings last past ${A.endAge}, with ${fK(r.nwAtRet)} at retirement (age ${r.hhRetAge}).`;
-    h+=`<div class="note" style="border-color:${gapYrs>0||r.broke!=null?'#b1462f':r.c}"><b style="color:${r.c}">${r.nm}</b><br>${head}. ${worst}${solo}<br>${end}</div>`;
+    const when=`${tight.cy} (age ${tight.age})`;
+    let worst;
+    if(tight.room>=0) worst=`The tightest year is ${when}, and there's still ${r50(tight.room/12)}/mo of room.`;
+    else if(tight.surplus<0) worst=`The tightest year is ${when}: spending runs ${r50(tight.surplus/12)}/mo past income, covered by drawing on savings.`;
+    else worst=`The tightest year is ${when}: only ${r50(tight.surplus/12)}/mo is left, ${r50(tight.room/12)}/mo short of the savings target.`;
+    if(tight.room<0&&gapYrs>1) worst+=` Short in ${gapYrs} of ${wk.length} working years.`;
+    if(tight.iRet!==tight.sRet) worst+=` Only ${tight.iRet?'she':'he'} is still working that year.`;
+
+    // bridge: who stops first, how long until retirement accounts open, what covers the years in between
+    const b=r.bridge; let bridge='';
+    if(b.has){
+      const yrs=b.unlockY-b.firstY, verb=b.both?'stop':'stops';
+      bridge=`<br><b>Early-retirement bridge:</b> ${b.who} ${verb} working in ${b.firstY} (age ${b.age}), ${yrs} year${yrs>1?'s':''} before retirement accounts open penalty-free in ${b.unlockY}. `+
+        (b.need<1000?`The household barely draws on savings in those years, so no bridge is needed.`
+        :`Those years need about <b>${fK(b.need)}</b> from cash and brokerage, and you'd have ${fK(b.have)} there. `+
+          (b.need<=b.have?`<b>That covers it.</b>`:`That is <b>${fK(b.need-b.have)} short</b>, so retirement accounts get tapped early and cost ${fK(r.penalty)} in penalties.`));
+    }
+    const end=r.broke!=null?`Savings run out at age ${r.broke}.`:`Savings last past ${A.endAge}, with ${fK(r.nwAtRet)} at retirement (age ${r.hhRetAge}).`;
+    h+=`<div class="note" style="border-color:${gapYrs>0||r.broke!=null||r.penalty>0?'#b1462f':r.c}"><b style="color:${r.c}">${r.nm}</b><br>${head}. ${worst}${bridge}<br>${end}</div>`;
   });
 
-  // how the scenarios compare
   const earnGap=base.wifeEarned-stop.wifeEarned, peakCare=Math.max(...base.rows.map(r=>r.care));
   if(earnGap>=1000){
     const cashGap=base.cashSaved-stop.cashSaved, cost=base.nwAtRet-stop.nwAtRet, careSaved=base.careSpent-stop.careSpent;
